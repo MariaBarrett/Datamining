@@ -37,6 +37,7 @@ def make_lists_of_attributes_from_file(filename):
 			listofattributes.append(temp)
 			temp=[]
 	return listofattributes
+	filename.close()
 
 """
 This function tests if a string is a number. I didn't write it myself. It's from http://stackoverflow.com/questions/354038/how-do-i-check-if-a-string-is-a-number-in-python
