@@ -158,16 +158,18 @@ def confidence(all_possible_from_maxlen):
 		for c in itertools.permutations(comb,2):
 			temp.append(c)
 		allpermutations.append(temp)
-	print len(allpermutations[0])
-	for x in allpermutations:
-		for pair in x:
-			print pair
-			print pair[0]
-			print pair[1]
-			if pair[0] in pair[1]:
-				del(pair)
-	print len(allpermutations[0])
 
+	#delete permutations if one value is contained in the other (not perfect - works only for 1 digit)
+
+	for x in allpermutations:
+		print len(x)
+		for i,n in enumerate(x):
+			if n[0][0] in n[1]:
+				del x[i]
+			if n[1][0] in n[0]:
+				del x[i]
+
+	return allpermutations #this is a list of permutations ready for calculating confidence
 
 allpossible = possible_comb(prunedlen3)
 confidence(allpossible)
