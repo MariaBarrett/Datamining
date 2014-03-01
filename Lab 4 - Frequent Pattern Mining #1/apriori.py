@@ -6,7 +6,7 @@ import numpy as np
 transactions = [[ 1, 2, 3, 4, 5 ], [ 1, 3, 5 ], [ 2, 3, 5 ], [ 1, 5 ], [ 1, 3, 4 ], [ 2, 3, 5 ], [ 2, 3, 5 ], [ 3, 4, 5 ], [ 4, 5 ], [ 2 ], [ 2, 3 ], [ 2, 3, 4 ], [ 3, 4, 5 ]] 
 
 minsupport = 0.30
-minconfidence = 0.4
+minconfidence = 0.7
 """
 This function takes a dataset and finds frequent items. It returns a dictionary of items 
 which are frequent enough to pass the support threshold. 
@@ -147,10 +147,9 @@ def possible_comb(pruned_maxlenght):
 					temp.append(c)
 		possible.append(temp)
 	return possible
-"""
 
-"""
-def confidence(all_possible_from_maxlen):
+
+def permutations(all_possible_from_maxlen):
 	allpermutations = []
 
 	for comb in all_possible_from_maxlen:
@@ -159,17 +158,55 @@ def confidence(all_possible_from_maxlen):
 			temp.append(c)
 		allpermutations.append(temp)
 
-	#delete permutations if one value is contained in the other (not perfect - works only for 1 digit)
-
+	#delete permutations if one value is contained in the other (not perfect - works only for first digit)
 	for x in allpermutations:
-		print len(x)
 		for i,n in enumerate(x):
 			if n[0][0] in n[1]:
 				del x[i]
 			if n[1][0] in n[0]:
 				del x[i]
-
+	
+	for x in allpermutations:
+		for i,n in enumerate(x):
+			if n[0][0] in n[1]:
+				del x[i]
+			if n[1][0] in n[0]:
+				del x[i]
+	
 	return allpermutations #this is a list of permutations ready for calculating confidence
 
 allpossible = possible_comb(prunedlen3)
-confidence(allpossible)
+permutated = permutations(allpossible)
+
+"""
+This function expects the permutated pairs and counts the joint probability of the pairs and the occurence of the first part of pair
+If the confidence is above threshold, the pair and the confidence is stored in a dictionary, which is returned. 
+"""
+def confidence(permutated, dataset):
+	confi = {}
+	for sublist in permutated:
+		for pair in sublist:
+			count1 = 0
+			count2 = 0
+			list(pair)
+			for row in dataset:
+				if set(pair[0]).issubset(row):
+					count1 +=1 
+					if set(pair[0]).issubset(row) and set(pair[1]).issubset(row):
+						count2 +=1
+			confidence = count2 / count1
+			if confidence > minconfidence:
+				confi[(str(pair[0])+str(pair[1]))] = confidence
+	print confi
+	return confi
+
+
+confidence(permutated, transactions)
+
+"""
+problems:
+calling manually stop
+Pruning the permutations before confidence only one digit
+
+"""
+
