@@ -161,18 +161,15 @@ def permutations(all_possible_from_maxlen):
 	#delete permutations if one value is contained in the other (not perfect - works only for first digit)
 	for x in allpermutations:
 		for i,n in enumerate(x):
-			if n[0][0] in n[1]:
+			if n[0][0] in n[1] or n[1][0] in n[0]:
 				del x[i]
-			if n[1][0] in n[0]:
-				del x[i]
-	
-	for x in allpermutations:
-		for i,n in enumerate(x):
-			if n[0][0] in n[1]:
-				del x[i]
-			if n[1][0] in n[0]:
-				del x[i]
-	
+			if len(n[0]) > 1:
+				if n[0][1] in n[1]:
+					del x[i]
+			if len(n[1]) > 1:
+				if n[1][1] in n[0]:
+					del x[i]
+
 	return allpermutations #this is a list of permutations ready for calculating confidence
 
 allpossible = possible_comb(prunedlen3)

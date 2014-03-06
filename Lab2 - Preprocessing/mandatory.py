@@ -3,6 +3,7 @@ import numpy as np
 import csv
 from random import choice
 from collections import Counter
+import itertools
 
 """
 README
@@ -47,53 +48,6 @@ def is_number(some_chars):
         return True
     except ValueError:
         return False
-
-"""
-This function takes the requested column /feature (except the first element which is the class label) and tests if the elements are floatable by calling the function is_number. 
-If not, the index and the value is added to a list and this list is added to a list of outliers and empty element: outliers_empty.
-If they are floatable they are floated
-If age is below minaccepted or above maxacctepted index and value is appended to outliers_empty
-The remaining values are appended to a list: accepted_inputs
-From accepted_inputs random values are drawn and inserted at the indices of the empty or outlier data points
-The updated list og all age answers is returned
-"""
-def ratio_cleaning(all_atributes, index_of_attribute, minaccepted, maxacctepted):
-	#Finding outliers and empty fields
-	outliers_empty = []
-	answer = all_atributes[index_of_attribute][1:] #the desired column minus the first elem, which is the label
-	temp = []
-	accepted_inputs = []
-	addedtogether = 0
-
-	for i in range(len(answer)):
-		#detecting non-floatable inputs
-		if is_number(answer[i]) == False:
-			temp.append(i)
-			temp.append(answer[i])
-		
-			outliers_empty.append(temp)
-			temp=[]
-		
-		if is_number(answer[i]) == True:
-			answer[i] = float(answer[i])
-			#detect outlier data
-			if answer[i] >maxacctepted or answer[i] <minaccepted:
-
-				temp.append(i)
-				temp.append(answer[i])
-			
-				outliers_empty.append(temp)
-				temp=[]
-			else: 
-				accepted_inputs.append(answer[i])
-	
-	#replacing outliers or empty cells with random numbers from the accepted inputs			
-	for elem in outliers_empty:
-		rand = choice(accepted_inputs)
-		answer[elem[0]] = rand
-
-	return answer
-
 
 """
 This function expects the cleaned data and describes through 
@@ -155,6 +109,53 @@ def normalize(data, minval, maxval):
 	return normalized
 
 """
+This function takes the requested column /feature (except the first element which is the class label) and tests if the elements are floatable by calling the function is_number. 
+If not, the index and the value is added to a list and this list is added to a list of outliers and empty element: outliers_empty.
+If they are floatable they are floated
+If age is below minaccepted or above maxacctepted index and value is appended to outliers_empty
+The remaining values are appended to a list: accepted_inputs
+From accepted_inputs random values are drawn and inserted at the indices of the empty or outlier data points
+The updated list og all age answers is returned
+"""
+def ratio_cleaning(all_atributes, index_of_attribute, minaccepted, maxacctepted):
+	#Finding outliers and empty fields
+	outliers_empty = []
+	answer = all_atributes[index_of_attribute][1:] #the desired column minus the first elem, which is the label
+	temp = []
+	accepted_inputs = []
+	addedtogether = 0
+
+	for i in range(len(answer)):
+		#detecting non-floatable inputs
+		if is_number(answer[i]) == False:
+			temp.append(i)
+			temp.append(answer[i])
+		
+			outliers_empty.append(temp)
+			temp=[]
+		
+		if is_number(answer[i]) == True:
+			answer[i] = float(answer[i])
+			#detect outlier data
+			if answer[i] >maxacctepted or answer[i] <minaccepted:
+
+				temp.append(i)
+				temp.append(answer[i])
+			
+				outliers_empty.append(temp)
+				temp=[]
+			else: 
+				accepted_inputs.append(answer[i])
+	
+	#replacing outliers or empty cells with random numbers from the accepted inputs			
+	for elem in outliers_empty:
+		rand = choice(accepted_inputs)
+		answer[elem[0]] = rand
+
+	return answer
+
+
+"""
 This function expects a dataset and the index of the binary column to be cleaned.
 If the lowercased answer contains "yes" or "1", the answer is 1.
 If the lowercased answer contains "no" or "0", the anwer is 0.
@@ -174,16 +175,16 @@ def binary_cleaning(allattributes,index_of_attribute):
 		if is_number(answer[i]) == False:
 			answer[i] = str(answer[i])
 			if 'yes' in answer[i].lower():
-				answer[i] = 1
+				answer[i] = "y"
 				accepted_inputs.append(answer[1])
 			elif answer[i] == '1':
-				answer[i] = 1
+				answer[i] = "y"
 				accepted_inputs.append(answer[1])
 			elif 'no' in answer[i].lower():
-				answer[i] = 0
+				answer[i] = "n"
 				accepted_inputs.append(answer[1])
 			elif answer[i] == '0':
-				answer[i] = 0
+				answer[i] = "n"
 				accepted_input.append(answer[1])
 			else: 
 				temp.append(i)
@@ -206,7 +207,7 @@ This function cleans the operating system column.
 If it meets outlier data they are replaced by a random draw from either of the 3 classes. 
 """
 def operating_sys_cleaning(dataset):
-	attribute_val = all_atributes[4][1:] # the desired column minus the first elem, which is the label
+	attribute_val = all_atributes[3][1:] # the desired column minus the first elem, which is the label
 	answer = np.copy(attribute_val)
 	answer = answer.tolist()
 
@@ -217,20 +218,21 @@ def operating_sys_cleaning(dataset):
 		temp = []
 
 		if "win" in answer[i].lower():
-			answer[i] = 0.0
+			answer[i] = "w"
 		elif "lin" in answer[i].lower() or "ubun" in answer[i].lower():
-			answer[i] = 1.0
+			answer[i] = "l"
 		elif "mac" in answer[i].lower() or "osx" in answer[i].lower():
-			answer[i] = 2.0
+			answer[i] = "m"
 		else:
 			temp.append(i) 
 			temp.append(answer[i]) 
 			outliers_empty.append(temp)
 
 	for elem in outliers_empty: #replacing outliers or empty cells with random numbers from the accepted inputs			
-		rand = choice(["w", "l", "m"])
+		rand = choice([0.0, 1.0, 2.0])
 		answer[elem[0]] = rand
 	return answer
+
 
 #############################################################################################
 #
@@ -238,8 +240,8 @@ def operating_sys_cleaning(dataset):
 #
 #############################################################################################
 
-minsupport = 0.30
-minconfidence = 0.7
+minsupport = 0.1
+minconfidence = 0.5
 """
 This function takes a dataset and finds frequent items. It returns a dictionary of items 
 which are frequent enough to pass the support threshold. 
@@ -266,25 +268,25 @@ It divides the joint probability by count of item 1 to get the support and retur
 """
 
 def joinSets_C2(frequent_items, dataset):
-	joinedsets = {}
-	temp = {}
+	joinedsets = []
+
 	
 	for a in itertools.combinations(frequent_items, 2): #using a library function to generate combinations of frequent items
+		temp = []
 		item1 = a[0]
 		item2 = a[1]
-
+		count = 0
 		for row in dataset:
 			#count joint probabilities and store count in a dictionary	
 			if item1 in set(row) and item2 in set(row):
-				if str(item1)+str(item2) in temp: 
-					temp[str(item1)+str(item2)] += 1
-				else:
-					temp[str(item1)+str(item2)] = 1
+				count +=1
+		#only saving if avobe threshold
+		if count / len(dataset) > minsupport:
 
-	#Only saving in joinedsets if above threshold.
-	for entry in temp: 
-		if temp[entry] /len(dataset) > minsupport:
-			joinedsets[entry] = temp[entry]
+			temp.append(item1)
+			temp.append(item2)
+			joinedsets.append(temp)
+
 	return joinedsets
 
 """
@@ -345,24 +347,14 @@ def apriori(dataset):
 
 	#C2
 	len2 = joinSets_C2(freq_items, dataset) 
-	C2combis = [int(float(num)) for num in len2.keys()] #turning list of strings into list of int
-	newC2 = []
-
-	#creating possible combinatioons of frequent combinations from frequent sets
-	for combi in C2combis:
-		newC2.append(map(int, str(combi))) #making a list of list of item sets 
 
 	#C3
-	len3 = joinSets_afterC2(newC2, transactions)
-	pruned_len3 = prune(len3, newC2)
+	len3 = joinSets_afterC2(len2, selected_features)
 
-	#c4 
-	len4 = joinSets_afterC2(len3, transactions)
-	pruned_len4 = prune(len4, len3) #Nothing returned
+	pruned_len3 = prune(len3, len2)
 
 	return pruned_len3
 
-prunedlen3 = apriori(transactions)
 
 
 """
@@ -405,8 +397,6 @@ def permutations(all_possible_from_maxlen):
 
 	return allpermutations #this is a list of permutations ready for calculating confidence
 
-allpossible = possible_comb(prunedlen3)
-permutated = permutations(allpossible)
 
 """
 This function expects the permutated pairs and counts the joint probability of the pairs and the occurence of the first part of pair
@@ -427,22 +417,15 @@ def confidence(permutated, dataset):
 			confidence = count2 / count1
 			if confidence > minconfidence:
 				confi[(str(pair[0])+str(pair[1]))] = confidence
-	print confi
 	return confi
+#########################################################################################
+#
+#										Calling
+#
+########################################################################################
 
-
-confidence(permutated, transactions)
-
-
-
-#Calling
 
 all_atributes = make_lists_of_attributes_from_file(file2014)
-
-#Age
-cleaned_age = ratio_cleaning(all_atributes,0,17,110)
-desc_age = describing(cleaned_age)
-norm_age = normalize(cleaned_age, desc_age[3], desc_age[4])
 
 #Programming skills
 cleaned_prog_skills = ratio_cleaning(all_atributes,1,0,10)
@@ -450,16 +433,34 @@ desc_prog_skills = describing(cleaned_prog_skills)
 norm_prog_skills = normalize(cleaned_prog_skills, desc_prog_skills[3], desc_prog_skills[4])
 
 #Tired of snow
-Snow = binary_cleaning(all_atributes,8)
+snow = binary_cleaning(all_atributes,8)
 
 #Operating system
 cleaned_os = operating_sys_cleaning(all_atributes)
 
+#make arrays of the selected features with one person per array
+selected_features = []
+
+for i in xrange(len(snow)):
+	temp = []
+	temp.append(norm_prog_skills[i])
+	temp.append(snow[i])
+	temp.append(cleaned_os[i])
+	selected_features.append(temp)
 
 
+#Calling Apriori
+prunedlen3 = apriori(selected_features)
 
+print prunedlen3
 
+allpossible = possible_comb(prunedlen3)
 
+permutated = permutations(allpossible)
+
+frequentpatterns = confidence(permutated, selected_features)
+
+print frequentpatterns
 
 
 
