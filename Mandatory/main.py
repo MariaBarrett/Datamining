@@ -1,18 +1,23 @@
 from __future__ import division
 import numpy as np
 import csv
-from random import choice
+import random
 from collections import Counter
 import itertools
+import copy
+import Apriori # my own apriori code
+import Kmeans #my own K-means code
+import KNN #my own K-Nearest Neighbor
 
-"""
-README
-File is converted to UTF-8 before opening them using code
-"""
+###########################################################################################
+#
+#									Main file
+#
+###########################################################################################
+random.seed(10)
 #Opening file, stripping and splitting. The structure is as follows [header[first header][second header]...][second person[first answer]...]
 #Attributes variables
 
-file2013 = "Data_Mining_Student_DataSet_Spring_2013_Fixed.csv"
 file2014 = "data_mining_2014_dataset.csv"
 
 def make_lists_of_attributes_from_file(filename):
@@ -38,6 +43,12 @@ def make_lists_of_attributes_from_file(filename):
 			listofattributes.append(temp)
 			temp=[]
 	return listofattributes
+
+###########################################################################################
+#
+#									Preprocessing
+#
+###########################################################################################
 
 """
 This function tests if a string is a number.
@@ -149,10 +160,13 @@ def ratio_cleaning(all_atributes, index_of_attribute, minaccepted, maxacctepted)
 	
 	#replacing outliers or empty cells with random numbers from the accepted inputs			
 	for elem in outliers_empty:
-		rand = choice(accepted_inputs)
+		rand = random.choice(accepted_inputs)
 		answer[elem[0]] = rand
 
-	return answer
+	stringanswer = copy.copy(answer)
+	for i in xrange(len(stringanswer)):
+		stringanswer[i] = str(stringanswer[i])
+	return stringanswer, answer
 
 
 """
@@ -191,14 +205,32 @@ def binary_cleaning(allattributes,index_of_attribute):
 				temp.append(answer[i])
 				outliers_empty.append(temp)
 				temp=[]
-	yes = answer.count(1)
-	no = answer.count(0)
+	yes = answer.count('y')
+	no = answer.count('n')
+
 	yesfrac = yes / (len(answer)- len(outliers_empty))
 	nofrac = no / (len(answer)- len(outliers_empty))
 
 	for elem in outliers_empty: #replacing outliers or empty cells with random numbers from the accepted inputs			
-		rand = choice(accepted_inputs)
+		rand = random.choice(accepted_inputs)
 		answer[elem[0]] = rand
+	return answer
+
+
+"""
+This function expects the cleaned column of a binary feature with letters "y" and "n". 
+It returns a new feature vector with 0 and 1 instead
+"""
+def binary_cleaning_num(column):
+	answer = np.copy(column)
+	answer = answer.tolist()
+
+	for i in range(len(answer)): #we need the index to store with the outlier / empty
+		
+		if answer[i] == "y":
+			answer[i] = 1
+		elif answer[i] == 'n':
+			answer[i] = 0
 	return answer
 
 
@@ -229,195 +261,58 @@ def operating_sys_cleaning(dataset):
 			outliers_empty.append(temp)
 
 	for elem in outliers_empty: #replacing outliers or empty cells with random numbers from the accepted inputs			
-		rand = choice([0.0, 1.0, 2.0])
+		rand = random.choice(["w", "l", "m"])
 		answer[elem[0]] = rand
 	return answer
 
-
-#############################################################################################
-#
-#								Apriori
-#
-#############################################################################################
-
-minsupport = 0.1
-minconfidence = 0.5
 """
-This function takes a dataset and finds frequent items. It returns a dictionary of items 
-which are frequent enough to pass the support threshold. 
+This function expects the cleaned operating system column and binarizes the discrete values
 """
-def countSupport(dataset):
-	itemcount = {}
-	frequent_items={} # Contains item: support 
-	for row in dataset:
-		for val in set(row):
-			if val in itemcount:
-				itemcount[val] = itemcount[val] +1
-			else:
-				itemcount[val] = 1 
+def operating_sys_cleaning_binary(column):
+	answer = np.copy(column)
+	answer = answer.tolist()
+	for i in xrange(len(answer)):
+		if answer[i] == "l":
+			answer[i] = [0,1,0]
+		elif answer[i] == "w":
+			answer[i] = [1,0,0]
+		elif answer[i] == "m":
+			answer[i] = [0,0,1]
+	return answer
 
-	for entry in itemcount:
-		if itemcount[entry] / len(dataset) > minsupport:
-			frequent_items[entry] = itemcount[entry] 	
-	return frequent_items
+#Standardizing for k-means
+
+#Computing mean and variance
+"""
+This function takes a column and computes the mean and the variance the feature 
+"""
+def mean_variance(data):
+	mean = sum(data) / len(data)
 	
-"""
-This function expects a dict of frequent items and a dataset. It uses a libray function to generate permutations of items in the list.
-It counts the joint appearances of item 1 and 2. It uses the set of each row to avoid double count in the case where an item appears two time in the same row. 
-It divides the joint probability by count of item 1 to get the support and returns a new dictioary, joinedsets, if result is above threshold. 
-"""
-
-def joinSets_C2(frequent_items, dataset):
-	joinedsets = []
-
-	
-	for a in itertools.combinations(frequent_items, 2): #using a library function to generate combinations of frequent items
-		temp = []
-		item1 = a[0]
-		item2 = a[1]
-		count = 0
-		for row in dataset:
-			#count joint probabilities and store count in a dictionary	
-			if item1 in set(row) and item2 in set(row):
-				count +=1
-		#only saving if avobe threshold
-		if count / len(dataset) > minsupport:
-
-			temp.append(item1)
-			temp.append(item2)
-			joinedsets.append(temp)
-
-	return joinedsets
-
-"""
-This function makes new permutations by combining frequent itemsets. 
-Only itemsets that have k-1 items in common are combined. 
-If the new combination is also a frequent combination 
-"""
-def joinSets_afterC2(frequentcombi, dataset):
-	frequent_items_dict = {}
-
-	#making a set of all items:
-	setofitem = []
-	[setofitem.append(num) for elem in frequentcombi for num in elem]
-	setofitem = set(setofitem)
-
-	possible = []
-	for frqset in frequentcombi:
-		for item in setofitem:
-			if item not in frqset:
-				newtemp =[]
-				for elem in frqset:
-					newtemp.append(elem) 
-				newtemp.append(item)#append single value to all lists if not already there:
-				possible.append(newtemp)
-	return possible
-
-"""
-This function prunes by making all possible combinations that are shorter than k-1.
-It stores all possible combinations in a temporary list and tries them on the 
-previous list of frequent sets. Only if all combinations are in this list, the
-candidate is stored in a new list
-"""
-def prune(possible_candidates, previous_freq):
-	#turning concatenated itemnames into lists of items
-	approved = []
-	
-	for i in xrange(len(possible_candidates)):
-		temp =[] #making a list of all possible combinations of lenght 2
-		for comb in itertools.combinations(possible_candidates[i],2):
-			temp.append(list(comb))
-			count = 0
-		
-		maxpoint = len(temp) #max combination that can be matched
-		for c in temp:
-			if c in previous_freq:
-				count += 1
-		if count == 3: #if all combinations are in the previous list of frequent sets
-			approved.append(possible_candidates[i])
-	return approved
-		
-"""
-Here everything is called. lenght is increased manually if there are still pruned examples in the previous
-Len4 is the first that does not return anything
-"""
-def apriori(dataset):
-	#C1
-	freq_items = countSupport(dataset) 
-
-	#C2
-	len2 = joinSets_C2(freq_items, dataset) 
-
-	#C3
-	len3 = joinSets_afterC2(len2, selected_features)
-
-	pruned_len3 = prune(len3, len2)
-
-	return pruned_len3
-
+	#variance:
+	su = 0	
+	for elem in data:
+		su += (elem - mean)**2
+	variance = su/len(data)	
+	return mean, variance
 
 
 """
-This function tries to make possible combinations of the max lenght pruned sets.
-It expects the pruned max lenght sets. It expects the following format[[list of set 1][list of set 2]...]
-It returns a list per input combinations. Each list contains a tuple of up to one element less that the lenght of the input. 
+This function calls mean_variance to get the mean and the variance for a feature
+Then these values are used to normalize every datapoint to zero mean and unit variance.
+A copy of the data is created. 
+The normalized values are inserted at the old index in the copy 
+The new, standardized data set is returned
 """
-def possible_comb(pruned_maxlenght):
-	possible = []
-	for comb in pruned_maxlenght:
-		temp = []
-		for i in xrange(len(comb)):
-			for c in itertools.combinations(comb,i):
-				if c != ():
-					temp.append(c)
-		possible.append(temp)
-	return possible
+def meanfree(data):
+	mean, variance = mean_variance(data)
 
+	new = np.copy(data)
+	for i in xrange(len(new)):
+		#replacing at correct index in the copy
+		new[i] = (new[i] - mean) / np.sqrt(variance)
+	return new 
 
-def permutations(all_possible_from_maxlen):
-	allpermutations = []
-
-	for comb in all_possible_from_maxlen:
-		temp = []
-		for c in itertools.permutations(comb,2):
-			temp.append(c)
-		allpermutations.append(temp)
-
-	#delete permutations if one value is contained in the other (not perfect - works only for first digit)
-	for x in allpermutations:
-		for i,n in enumerate(x):
-			if n[0][0] in n[1] or n[1][0] in n[0]:
-				del x[i]
-			if len(n[0]) > 1:
-				if n[0][1] in n[1]:
-					del x[i]
-			if len(n[1]) > 1:
-				if n[1][1] in n[0]:
-					del x[i]
-
-	return allpermutations #this is a list of permutations ready for calculating confidence
-
-
-"""
-This function expects the permutated pairs and counts the joint probability of the pairs and the occurence of the first part of pair
-If the confidence is above threshold, the pair and the confidence is stored in a dictionary, which is returned. 
-"""
-def confidence(permutated, dataset):
-	confi = {}
-	for sublist in permutated:
-		for pair in sublist:
-			count1 = 0
-			count2 = 0
-			list(pair)
-			for row in dataset:
-				if set(pair[0]).issubset(row):
-					count1 +=1 
-					if set(pair[0]).issubset(row) and set(pair[1]).issubset(row):
-						count2 +=1
-			confidence = count2 / count1
-			if confidence > minconfidence:
-				confi[(str(pair[0])+str(pair[1]))] = confidence
-	return confi
 #########################################################################################
 #
 #										Calling
@@ -428,39 +323,76 @@ def confidence(permutated, dataset):
 all_atributes = make_lists_of_attributes_from_file(file2014)
 
 #Programming skills
-cleaned_prog_skills = ratio_cleaning(all_atributes,1,0,10)
-desc_prog_skills = describing(cleaned_prog_skills)
-norm_prog_skills = normalize(cleaned_prog_skills, desc_prog_skills[3], desc_prog_skills[4])
+string_cleaned_prog_skills, cleaned_prog_skills = ratio_cleaning(all_atributes,1,0,10)
+standardized_prog_skills = meanfree(cleaned_prog_skills)
+
 
 #Tired of snow
-snow = binary_cleaning(all_atributes,8)
+snow_letter = binary_cleaning(all_atributes,8) #with letters for apriori
+snow_num = binary_cleaning_num(snow_letter) # with binary vals for Kmeans and KNN
 
 #Operating system
-cleaned_os = operating_sys_cleaning(all_atributes)
+cleaned_os = operating_sys_cleaning(all_atributes) #For apriori
+binary_os = operating_sys_cleaning_binary(cleaned_os) # for Kmeans and KNN 
 
-#make arrays of the selected features with one person per array
-selected_features = []
 
-for i in xrange(len(snow)):
+#make arrays of the selected features with one person per array for apriori
+apriori_features = []
+
+for i in xrange(len(snow_letter)):
 	temp = []
-	temp.append(norm_prog_skills[i])
-	temp.append(snow[i])
+	temp.append(string_cleaned_prog_skills[i])
+	temp.append(snow_letter[i])
 	temp.append(cleaned_os[i])
-	selected_features.append(temp)
+	apriori_features.append(temp)
 
 
 #Calling Apriori
-prunedlen3 = apriori(selected_features)
+prunedlen3 = Apriori.apriori(apriori_features)
+print "*" *45
+print "Apriori"
+print "*" * 45
+print "Longest frequent pattern:", prunedlen3
 
-print prunedlen3
+allpossible = Apriori.possible_comb(prunedlen3)
 
-allpossible = possible_comb(prunedlen3)
+permutated = Apriori.permutations(allpossible)
 
-permutated = permutations(allpossible)
+Rules = Apriori.confidence(permutated, apriori_features)
 
-frequentpatterns = confidence(permutated, selected_features)
+print "Rules from longest frequent pattern and their confidence:", Rules
 
-print frequentpatterns
+#make arrays of the selected features with one person per array for Kmeans and KNN
+num_features = []
+
+for i in xrange(len(snow_num)):
+	temp = []
+	temp.append(standardized_prog_skills[i])
+	temp.append(binary_os[i][0]) #ugly hard-coded way of getting elements out of list
+	temp.append(binary_os[i][1])
+	temp.append(binary_os[i][2])
+	temp.append(snow_num[i])
+	num_features.append(temp)
+num_features = np.array(num_features) #feature set [age, 3 binary values for operating sys, tiredness of snow]
+
+#Calling k-means
+Kmeans.kmeans(num_features)
+
+#Calling KNN
+#making a train and a test set. The label is the last value: tiredness of snow.
+train = num_features[:50] #50 datapoints in train set
+test = num_features[50:] # the remanining 17 datapoints in test set
+k = 3
+Error = KNN.eval(train, test, k)
+print "*" *45
+print "K-nearest neighbor"
+print "*" * 45
+print "k = ", k
+print "Error on testset:", Error 
+
+
+
+
 
 
 
